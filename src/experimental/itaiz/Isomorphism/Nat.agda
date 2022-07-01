@@ -58,12 +58,14 @@ module ℕ≅ℕ⊎ℕ where
 
   -- Slightly complicated due to termination.
 
+  to'-with : ℕ ⊎ ℕ → ℕ ⊎ ℕ
+  to'-with (inj₁ x) = inj₁ (suc x)
+  to'-with (inj₂ y) = inj₂ (suc y)
+
   to' : ℕ → ℕ ⊎ ℕ
   to' zero = inj₁ zero
   to' (suc zero) = inj₂ zero
-  to' (suc (suc n)) with to' n
-  ... | inj₁ i = inj₁ (suc i)
-  ... | inj₂ i = inj₂ (suc i)
+  to' (suc (suc n)) = to'-with (to' n)
 
   from' : ℕ ⊎ ℕ → ℕ
   from' (inj₁ zero) = zero
@@ -71,23 +73,33 @@ module ℕ≅ℕ⊎ℕ where
   from' (inj₂ zero) = suc zero
   from' (inj₂ (suc j)) = suc (suc (from' (inj₂ j)))
 
+  from∘to'-with : (n : ℕ) (to'-n : ℕ ⊎ ℕ) → from' to'-n ≡ n → from' (to'-with to'-n) ≡ suc (suc n)
+  from∘to'-with n (inj₁ i) q = cong (suc ∘ suc) q
+  from∘to'-with n (inj₂ j) q = cong (suc ∘ suc) q
+
   from∘to' : (n : ℕ) → from' (to' n) ≡ n
   from∘to' zero = refl
   from∘to' (suc zero) = refl
-  from∘to' (suc (suc n)) with to' n | from∘to' n
-  ... | inj₁ i | q = cong (suc ∘ suc) q
-  ... | inj₂ j | q = cong (suc ∘ suc) q
+  from∘to' (suc (suc n)) = from∘to'-with n (to' n) (from∘to' n)
+
+  to∘from'-with₁ : (i n : ℕ) → (to'-[suc-n] : ℕ ⊎ ℕ) → to'-[suc-n] ≡ inj₁ i → to'-with to'-[suc-n] ≡ inj₁ (suc i)
+  to∘from'-with₁ i n (inj₁ i') q = cong (inj₁ ∘ suc) (inj₁-injective q)
+
+  to∘from'-with₂ : (i : ℕ) (from'-[inj₁-i] : ℕ) → to' from'-[inj₁-i] ≡ inj₁ i → to'-with (to' from'-[inj₁-i]) ≡ inj₁ (suc i)
+  to∘from'-with₂ i zero q = cong (inj₁ ∘ suc) (inj₁-injective q)
+  to∘from'-with₂ i (suc n) q = to∘from'-with₁ i n (to' (suc n)) q
+
+  to∘from'-with₃ : (j n : ℕ) (to'-[suc-n] : ℕ ⊎ ℕ) → to'-[suc-n] ≡ inj₂ j → to'-with to'-[suc-n] ≡ inj₂ (suc j)
+  to∘from'-with₃ j n (inj₂ j') q = cong (inj₂ ∘ suc) (inj₂-injective q)
+
+  to∘from'-with₄ : (j from'-[inj₂-j] : ℕ) → to' from'-[inj₂-j] ≡ inj₂ j → to'-with (to' from'-[inj₂-j]) ≡ inj₂ (suc j)
+  to∘from'-with₄ j (suc n) q = to∘from'-with₃ j n (to' (suc n)) q
 
   to∘from' : (ii : ℕ ⊎ ℕ) → to' (from' ii) ≡ ii
   to∘from' (inj₁ zero) = refl
-  to∘from' (inj₁ (suc i)) with from' (inj₁ i) | to∘from' (inj₁ i)
-  ... | zero | q = cong (inj₁ ∘ suc) (inj₁-injective q)
-  ... | suc n | q with to' (suc n)
-  ... | inj₁ i' = cong (inj₁ ∘ suc) (inj₁-injective q)
+  to∘from' (inj₁ (suc i)) = to∘from'-with₂ i (from' (inj₁ i)) (to∘from' (inj₁ i))
   to∘from' (inj₂ zero) = refl
-  to∘from' (inj₂ (suc j)) with from' (inj₂ j) | to∘from' (inj₂ j)
-  ... | suc n | q with to' (suc n)
-  ... | inj₂ j' = cong (inj₂ ∘ suc) (inj₂-injective q)
+  to∘from' (inj₂ (suc j)) = to∘from'-with₄ j (from' (inj₂ j)) (to∘from' (inj₂ j))
 
   ℕ≅ℕ⊎ℕ : ℕ ≅ (ℕ ⊎ ℕ)
   ℕ≅ℕ⊎ℕ = record { to = to' ; from = from' ; from∘to = from∘to' ; to∘from = to∘from' }
