@@ -28,6 +28,8 @@ Our repo branch:
   git checkout -t origin/arg
 -}
 
+module experimental.mdel.Main_example where
+
 data ℕ : Set where
   zero : ℕ
   suc : ℕ -> ℕ

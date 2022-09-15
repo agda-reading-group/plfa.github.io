@@ -1,3 +1,5 @@
+module experimental.mdel.NxN where
+
 open import Relation.Binary.PropositionalEquality
 open ≡-Reasoning
 open import Data.Bool using (Bool; false; true; not)
