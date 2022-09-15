@@ -554,6 +554,9 @@ Prove the following relationship between map and append:
 
 ```
 -- Your code goes here
+map-++-distribute : ∀ {A B} → {f : A → B} → {xs ys : List A} → map f (xs ++ ys) ≡ map f xs ++ map f ys
+map-++-distribute {A} {B} {f} {[]} {ys} = refl
+map-++-distribute {A} {B} {f} {x ∷ xs} {ys} rewrite map-++-distribute {A} {B} {f} {xs} {ys} = refl
 ```
 
 #### Exercise `map-Tree` (practice)
@@ -571,6 +574,9 @@ Define a suitable map operator over trees:
 
 ```
 -- Your code goes here
+map-Tree : ∀ {A B C D : Set} → (A → C) → (B → D) → Tree A B → Tree C D
+map-Tree {A} {B} {C} {D} f g (leaf a) = leaf (f a)
+map-Tree {A} {B} {C} {D} f g (node l b r) = node (map-Tree f g l) (g b) (map-Tree f g r)
 ```
 
 ## Fold {#Fold}
@@ -728,7 +734,35 @@ Prove that the sum of the numbers `(n - 1) + ⋯ + 0` is
 equal to `n * (n ∸ 1) / 2`:
 
     sum (downFrom n) * 2 ≡ n * (n ∸ 1)
+```
+open import Data.Nat.Properties using (*-distribʳ-+; *-comm; +-suc)
 
+sum-downFrom : (n : ℕ) → sum (downFrom n) * 2 ≡ n * (n ∸ 1)
+sum-downFrom zero = refl
+sum-downFrom (suc zero) = refl
+-- suc (suc ((n + (n + foldr _+_ 0 (downFrom n))) * 2)) ≡ suc (n + suc (n + n * suc n))
+sum-downFrom (suc sn@(suc n)) =
+  begin
+    suc (suc ((n + (n + sum (downFrom n))) * 2))
+  ≡⟨⟩
+    suc (suc ((n + sum (downFrom sn)) * 2))
+  ≡⟨ cong (λ z → suc (suc z)) (*-distribʳ-+ 2 n (n + foldr _+_ zero (downFrom n))) ⟩
+    suc (suc (n * 2 + sum (downFrom sn) * 2))
+  ≡⟨ cong (λ z → suc (suc (n * 2 + z))) (sum-downFrom sn) ⟩
+    suc (suc (n * 2 + sn * (sn ∸ 1)))
+  ≡⟨ cong (λ z → suc (suc (z + sn * (sn ∸ 1)))) n*2≡n+n ⟩
+    suc (suc ((n + n) + sn * (sn ∸ 1)))
+  ≡⟨ cong (suc ∘ suc) (+-assoc n n (n + n * n)) ⟩
+    suc (suc (n + (n + sn * n)))
+  ≡⟨ cong (λ z → suc (suc (n + (n + z)))) (*-comm (suc n) n) ⟩
+    suc (suc (n + (n + n * sn)))
+  ≡⟨ cong suc (sym (+-suc n (n + n * suc n))) ⟩
+    suc (n + suc (n + n * sn))
+  ∎
+  where
+  n*2≡n+n : n * 2 ≡ n + n
+  n*2≡n+n rewrite *-comm n 2 | +-identityʳ n = refl
+```
 
 ## Monoids
 
