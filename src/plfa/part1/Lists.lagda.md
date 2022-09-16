@@ -869,7 +869,11 @@ operations associate to the left rather than the right.  For example:
     foldl _⊗_ e [ x , y , z ]  =  ((e ⊗ x) ⊗ y) ⊗ z
 
 ```
--- Your code goes here
+--foldr : ∀ {A B : Set} → (A → B → B) → B → List A → B
+
+foldl : {A B : Set} → (_⊗_ : B → A → B) → (e : B) → (xs : List A) → B
+foldl _⊗_ e [] = e
+foldl _⊗_ e (x ∷ xs) = foldl _⊗_ (e ⊗ x) xs
 ```
 
 
@@ -879,7 +883,36 @@ Show that if `_⊗_` and `e` form a monoid, then `foldr _⊗_ e` and
 `foldl _⊗_ e` always compute the same result.
 
 ```
--- Your code goes here
+
+foldl-monoid : {A : Set} (_⊗_ : A → A → A) (e : A) → IsMonoid _⊗_ e →
+  (x y : A) → (xs : List A) → x ⊗ foldl _⊗_ y xs ≡ foldl _⊗_ (x ⊗ y) xs
+foldl-monoid _⊗_ e monoid-⊗ x y [] = refl
+foldl-monoid _⊗_ e monoid-⊗ x y (z ∷ xs) = begin
+  (x ⊗ foldl _⊗_ y (z ∷ xs))
+  ≡⟨⟩
+  (x ⊗ foldl _⊗_ (y ⊗ z) xs)
+  ≡⟨ foldl-monoid _⊗_ e monoid-⊗ x (y ⊗ z) xs ⟩
+  (foldl _⊗_ (x ⊗ (y ⊗ z)) xs)
+  ≡⟨ cong (λ t → foldl _⊗_ t xs) (sym (assoc monoid-⊗ x y z)) ⟩
+  (foldl _⊗_ ((x ⊗ y) ⊗ z) xs)
+  ≡⟨⟩
+  foldl _⊗_ (x ⊗ y) (z ∷ xs)
+  ∎
+
+foldr-monoid-foldl : {A : Set} (_⊗_ : A → A → A) (e : A) → IsMonoid _⊗_ e →
+  (xs : List A) → foldr _⊗_ e xs ≡ foldl _⊗_ e xs
+foldr-monoid-foldl _⊗_ e monoid-⊗ [] = refl
+foldr-monoid-foldl _⊗_ e monoid-⊗ (x ∷ xs) = begin
+  (x ⊗ foldr _⊗_ e xs)
+  ≡⟨ cong (x ⊗_) (foldr-monoid-foldl _⊗_ e monoid-⊗ xs) ⟩
+  (x ⊗ foldl _⊗_ e xs)
+  ≡⟨ foldl-monoid _⊗_ e monoid-⊗ x e xs ⟩
+  foldl _⊗_ (x ⊗ e) xs
+  ≡⟨ cong (λ t → foldl _⊗_ t xs) (identityʳ monoid-⊗ x) ⟩
+  foldl _⊗_ x xs
+  ≡⟨ cong (λ t → foldl _⊗_ t xs) (sym (identityˡ monoid-⊗ x)) ⟩
+  foldl _⊗_ (e ⊗ x) xs
+  ∎
 ```
 
 
@@ -997,7 +1030,37 @@ replacement for `_×_`.  As a consequence, demonstrate an equivalence relating
 `_∈_` and `_++_`.
 
 ```
--- Your code goes here
+open import Data.Sum using (_⊎_; inj₁; inj₂)
+
+Any-++-⇔ : {A : Set} {P : A → Set} (xs ys : List A) →
+  Any P (xs ++ ys) ⇔ (Any P xs ⊎ Any P ys)
+Any-++-⇔ {A} {P} xs ys = record { to = to xs ; from = from xs }
+  where
+    to : (xs : List A) → Any P (xs ++ ys) → Any P xs ⊎ Any P ys
+    to [] Pys = inj₂ Pys
+    to (x ∷ xs) (here Px) = inj₁ (here Px)
+    to (x ∷ xs) (there AP) with to xs AP
+    ... | inj₁ Pxs = inj₁ (there Pxs)
+    ... | inj₂ Pys = inj₂ Pys
+    from : (xs : List A) → Any P xs ⊎ Any P ys → Any P (xs ++ ys)
+    from [] (inj₂ Pys) = Pys
+    from (x ∷ xs) (inj₁ (here Px)) = here Px
+    from (x ∷ xs) (inj₁ (there Pxs)) = there (from xs (inj₁ Pxs))
+    from (x ∷ xs) (inj₂ Pys) = there (from xs (inj₂ Pys))
+    from∘to : (xs : List A) → (AP : Any P (xs ++ ys)) → from xs (to xs AP) ≡ AP
+    from∘to [] Pys = refl
+    from∘to (x ∷ xs) (here Px) = refl
+    from∘to (x ∷ xs) (there AP) with to xs AP in eq
+    ... | inj₁ Pxs rewrite sym eq = cong there (from∘to xs AP)
+    ... | inj₂ Pys rewrite sym eq = cong there (from∘to xs AP)
+    to∘from : (xs : List A) → (AP : Any P xs ⊎ Any P ys) → to xs (from xs AP) ≡ AP
+    to∘from [] (inj₂ Pys) = refl
+    to∘from (x ∷ xs) (inj₁ (here Px)) = refl
+    to∘from (x ∷ xs) (inj₁ (there Pxs)) rewrite to∘from xs (inj₁ Pxs) = refl
+    to∘from (x ∷ xs) (inj₂ Pys) rewrite to∘from xs (inj₂ Pys) = refl
+
+∈-++-⇔ : {A : Set} (x : A) → (xs ys : List A) → (x ∈ (xs ++ ys)) ⇔ ((x ∈ xs) ⊎ (x ∈ ys))
+∈-++-⇔ {A} x = Any-++-⇔ {A} {x ≡_}
 ```
 
 #### Exercise `All-++-≃` (stretch)
