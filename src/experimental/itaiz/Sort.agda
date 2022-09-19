@@ -26,64 +26,52 @@ merge (x ∷ xs) = go
     ... | yes _ = x ∷ merge xs (y ∷ ys)
     ... | no _ = y ∷ go ys
 
-merge→ : (xs ys : List ℕ) → (w : ℕ) → w ∈ merge xs ys → w ∈ xs ⊎ w ∈ ys
-merge→ [] ys w w∈ = inj₂ w∈
-merge→ (x ∷ xs) [] w w∈ = inj₁ w∈
-merge→ (x ∷ xs) (y ∷ ys) w w∈ with x ≤? y | w∈
-merge→ (x ∷ xs) (y ∷ ys) w w∈    | yes _  | zero = inj₁ zero
-merge→ (x ∷ xs) (y ∷ ys) w w∈    | yes _  | suc w∈xsyys with merge→ xs (y ∷ ys) w w∈xsyys
-merge→ (x ∷ xs) (y ∷ ys) w w∈    | yes _  | suc w∈xxsys    | inj₁ w∈xs = inj₁ (suc w∈xs)
-merge→ (x ∷ xs) (y ∷ ys) w w∈    | yes _  | suc w∈xxsys    | inj₂ w∈yys = inj₂ w∈yys
-merge→ (x ∷ xs) (y ∷ ys) w w∈    | no _   | zero = inj₂ zero
-merge→ (x ∷ xs) (y ∷ ys) w w∈    | no _   | suc w∈xxsys with merge→ (x ∷ xs) ys w w∈xxsys
-merge→ (x ∷ xs) (y ∷ ys) w w∈    | no _   | suc w∈xsyys    | inj₁ w∈xxs = inj₁ w∈xxs
-merge→ (x ∷ xs) (y ∷ ys) w w∈    | no _   | suc w∈xsyys    | inj₂ w∈ys = inj₂ (suc w∈ys)
+to : (w : ℕ) → (xs ys : List ℕ) → w ∈ merge xs ys → w ∈ xs ⊎ w ∈ ys
+to w [] ys w∈ = inj₂ w∈
+to w (x ∷ xs) [] w∈ = inj₁ w∈
+to w (x ∷ xs) (y ∷ ys) w∈ with x ≤? y | w∈
+to w (x ∷ xs) (y ∷ ys) w∈    | yes _  | zero = inj₁ zero
+to w (x ∷ xs) (y ∷ ys) w∈    | yes _  | suc w∈xsyys with to w xs (y ∷ ys) w∈xsyys
+to w (x ∷ xs) (y ∷ ys) w∈    | yes _  | suc w∈xsyys    | inj₁ w∈xs = inj₁ (suc w∈xs)
+to w (x ∷ xs) (y ∷ ys) w∈    | yes _  | suc w∈xsyys    | inj₂ w∈yys = inj₂ w∈yys
+to w (x ∷ xs) (y ∷ ys) w∈    | no _   | zero = inj₂ zero
+to w (x ∷ xs) (y ∷ ys) w∈    | no _   | suc w∈xxsys with to w (x ∷ xs) ys w∈xxsys
+to w (x ∷ xs) (y ∷ ys) w∈    | no _   | suc w∈xxsys    | inj₁ w∈xxs = inj₁ w∈xxs
+to w (x ∷ xs) (y ∷ ys) w∈    | no _   | suc w∈xxsys    | inj₂ w∈ys = inj₂ (suc w∈ys)
 
-merge←ˡ : (xs ys : List ℕ) → (w : ℕ) →  w ∈ xs → w ∈ merge xs ys
-merge←ˡ (x ∷ xs) [] w w∈ = w∈
-merge←ˡ (x ∷ xs) (y ∷ ys) w w∈ with x ≤? y | w∈
-merge←ˡ (x ∷ xs) (y ∷ ys) .x w∈   | yes _  | zero = zero
-merge←ˡ (x ∷ xs) (y ∷ ys) w w∈    | yes _  | suc w∈xs = suc (merge←ˡ xs (y ∷ ys) w w∈xs)
-merge←ˡ (x ∷ xs) (y ∷ ys) .x w∈   | no _   | zero = suc (merge←ˡ (x ∷ xs) ys x zero)
-merge←ˡ (x ∷ xs) (y ∷ ys) w w∈    | no _   | suc w∈xs = suc (merge←ˡ (x ∷ xs) ys w (suc w∈xs))
+fromˡ : (w : ℕ) →  (xs ys : List ℕ) → w ∈ xs → w ∈ merge xs ys
+fromˡ w (x ∷ xs) [] w∈ = w∈
+fromˡ w (x ∷ xs) (y ∷ ys) w∈ with x ≤? y | w∈
+fromˡ w (x ∷ xs) (y ∷ ys) w∈    | yes _  | zero = zero
+fromˡ w (x ∷ xs) (y ∷ ys) w∈    | yes _  | suc w∈xs = suc (fromˡ w xs (y ∷ ys) w∈xs)
+fromˡ w (x ∷ xs) (y ∷ ys) w∈    | no _   | zero = suc (fromˡ w (x ∷ xs) ys zero)
+fromˡ w (x ∷ xs) (y ∷ ys) w∈    | no _   | suc w∈xs = suc (fromˡ w (x ∷ xs) ys (suc w∈xs))
 
-merge←ʳ : (xs ys : List ℕ) → (w : ℕ) →  w ∈ ys → w ∈ merge xs ys
-merge←ʳ [] (y ∷ ys) w w∈ = w∈
-merge←ʳ (x ∷ xs) (y ∷ ys) w w∈ with x ≤? y | w∈
-merge←ʳ (x ∷ xs) (y ∷ ys) .y w∈   | yes _  | zero = suc (merge←ʳ xs (y ∷ ys) y zero)
-merge←ʳ (x ∷ xs) (y ∷ ys) w w∈    | yes _  | suc w∈ys = suc (merge←ʳ xs (y ∷ ys) w w∈)
-merge←ʳ (x ∷ xs) (y ∷ ys) .y w∈   | no _   | zero = zero
-merge←ʳ (x ∷ xs) (y ∷ ys) w w∈    | no _   | suc w∈ys = suc (merge←ʳ (x ∷ xs) ys w w∈ys)
+fromʳ : (w : ℕ) → (xs ys : List ℕ) → w ∈ ys → w ∈ merge xs ys
+fromʳ w [] (y ∷ ys) w∈ = w∈
+fromʳ w (x ∷ xs) (y ∷ ys) w∈ with x ≤? y | w∈
+fromʳ w (x ∷ xs) (y ∷ ys) w∈    | yes _  | zero = suc (fromʳ w xs (y ∷ ys) zero)
+fromʳ w (x ∷ xs) (y ∷ ys) w∈    | yes _  | suc w∈ys = suc (fromʳ w xs (y ∷ ys) w∈)
+fromʳ w (x ∷ xs) (y ∷ ys) w∈    | no _   | zero = zero
+fromʳ w (x ∷ xs) (y ∷ ys) w∈    | no _   | suc w∈ys = suc (fromʳ w (x ∷ xs) ys w∈ys)
 
-merge← : (xs ys : List ℕ) → (w : ℕ) → (w ∈ xs) ⊎ (w ∈ ys) → w ∈ merge xs ys
-merge← xs ys w (inj₁ w∈xs) = merge←ˡ xs ys w w∈xs
-merge← xs ys w (inj₂ w∈ys) = merge←ʳ xs ys w w∈ys
+from : (w : ℕ) → (xs ys : List ℕ) → (w ∈ xs) ⊎ (w ∈ ys) → w ∈ merge xs ys
+from w xs ys (inj₁ w∈xs) = fromˡ w xs ys w∈xs
+from w xs ys (inj₂ w∈ys) = fromʳ w xs ys w∈ys
 
-merge←∘merge→ : (xs ys : List ℕ) → (w : ℕ)
+from∘to : (w : ℕ) → (xs ys : List ℕ)
   → (w∈ : w ∈ merge xs ys)
-  → merge← xs ys w (merge→ xs ys w w∈) ≡ w∈
-merge←∘merge→ [] (y ∷ ys) w w∈ = refl
-merge←∘merge→ (x ∷ xs) [] w w∈ = refl
-merge←∘merge→ (x ∷ xs) (y ∷ ys) w w∈ = {!!}
-{-
-  where
-    xxx : x ≤? y
-    xxx = ?
--}
+  → from w xs ys (to w xs ys w∈) ≡ w∈
+from∘to w [] (y ∷ ys) w∈ = refl
+from∘to w (x ∷ xs) [] w∈ = refl
+from∘to w (x ∷ xs) (y ∷ ys) w∈ = {!!}
 
-{-
---with x ≤? y
---... | q = {!!} --with x ≤? y | w∈
-
-merge←ˡmerge←ʳ∘merge→ (x ∷ xs) (y ∷ ys) w w∈    | yes _  | zero = ?
-merge←ˡmerge←ʳ∘merge→ (x ∷ xs) (y ∷ ys) w w∈    | yes _  | suc w∈xsyys with merge→ xs (y ∷ ys) w w∈xsyys
-merge←ˡmerge←ʳ∘merge→ (x ∷ xs) (y ∷ ys) w w∈    | yes _  | suc w∈xxsys    | inj₁ w∈xs = ?
-merge←ˡmerge←ʳ∘merge→ (x ∷ xs) (y ∷ ys) w w∈    | yes _  | suc w∈xxsys    | inj₂ w∈yys = ?
-merge←ˡmerge←ʳ∘merge→ (x ∷ xs) (y ∷ ys) w w∈    | no _   | zero = ?
-merge←ˡmerge←ʳ∘merge→ (x ∷ xs) (y ∷ ys) w w∈    | no _   | suc w∈xxsys with merge→ (x ∷ xs) ys w w∈xxsys
-merge←ˡmerge←ʳ∘merge→ (x ∷ xs) (y ∷ ys) w w∈    | no _   | suc w∈xsyys    | inj₁ w∈xxs = ?
-merge←ˡmerge←ʳ∘merge→ (x ∷ xs) (y ∷ ys) w w∈    | no _   | suc w∈xsyys    | inj₂ w∈ys = ?
--}
+to∘from : (w : ℕ) → (xs ys : List ℕ)
+  → (w∈ : w ∈ xs ⊎ w ∈ ys)
+  → to w xs ys (from w xs ys w∈) ≡ w∈
+to∘from w [] (y ∷ ys) (inj₂ w∈ys) = refl
+to∘from w (x ∷ xs) [] (inj₁ w∈xxs) = refl
+to∘from w (x ∷ xs) (x₁ ∷ ys) w∈ = {!!}
 
 ≰→≤ : {m n : ℕ} → ¬ (m ≤ n) → n ≤ m
 ≰→≤ {zero} {n} m≰n = ⊥-elim (m≰n z≤n)
@@ -97,14 +85,14 @@ merge-Sorted (x ∷ xs) (y ∷ ys) (x ∷ Sxs) (y ∷ Sys) with x ≤? y
 ... | yes x≤y = x ∷ f
   where
     f : {w : ℕ} → w ∈ merge xs (y ∷ ys) → x ≤ w
-    f {w} w∈ with merge→ xs (y ∷ ys) w w∈
+    f {w} w∈ with to w xs (y ∷ ys) w∈
     ... | inj₁ w∈xs = Sxs w∈xs
     ... | inj₂ zero = x≤y
     ... | inj₂ (suc w∈ys) = ≤-trans x≤y (Sys w∈ys)
 ... | no x≰y = y ∷ f
   where
     f : {w : ℕ} → w ∈ merge (x ∷ xs) ys → y ≤ w
-    f {w} w∈ with merge→ (x ∷ xs) ys w w∈
+    f {w} w∈ with to w (x ∷ xs) ys w∈
     ... | inj₁ zero = ≰→≤ x≰y
     ... | inj₁ (suc w∈xs) = ≤-trans (≰→≤ x≰y) (Sxs w∈xs)
     ... | inj₂ w∈ys = Sys w∈ys
@@ -114,3 +102,14 @@ split [] = [] , []
 split (x ∷ []) = [ x ] , []
 split (y ∷ z ∷ xs) with split xs
 ... | ys , zs = y ∷ ys , z ∷ zs
+
+sort : List ℕ → List ℕ
+sort xs = go (length xs) xs
+  where
+    go : ℕ → List ℕ → List ℕ
+    go zero _ = []
+    go (suc n) [] = []
+    go (suc n) (x ∷ []) = [ x ]
+    go (suc n) xs@(_ ∷ _ ∷ _) with split xs
+    ... | ys , zs = merge (go n ys) (go n zs)
+
