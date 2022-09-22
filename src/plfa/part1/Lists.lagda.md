@@ -28,7 +28,7 @@ open import Relation.Nullary using (¬_; Dec; yes; no)
 open import Data.Product using (_×_; ∃; ∃-syntax) renaming (_,_ to ⟨_,_⟩)
 open import Function using (_∘_)
 open import Level using (Level)
-open import plfa.part1.Isomorphism using (_≃_; _⇔_)
+open import plfa.part1.Isomorphism using (_≃_; _⇔_; extensionality)
 ```
 
 
@@ -543,7 +543,12 @@ Prove that the map of a composition is equal to the composition of two maps:
 The last step of the proof requires extensionality.
 
 ```
--- Your code goes here
+map-compose : {A B C : Set} (f : A → B) → (g : B → C) → map (g ∘ f) ≡ map g ∘ map f
+map-compose {A} f g = extensionality H
+  where
+    H : (xs : List A) → map (g ∘ f) xs ≡ (map g ∘ map f) xs
+    H [] = refl
+    H (x ∷ xs) rewrite H xs = refl
 ```
 
 #### Exercise `map-++-distribute` (practice)
@@ -553,7 +558,6 @@ Prove the following relationship between map and append:
     map f (xs ++ ys) ≡ map f xs ++ map f ys
 
 ```
--- Your code goes here
 map-++-distribute : ∀ {A B} → {f : A → B} → {xs ys : List A} → map f (xs ++ ys) ≡ map f xs ++ map f ys
 map-++-distribute {A} {B} {f} {[]} {ys} = refl
 map-++-distribute {A} {B} {f} {x ∷ xs} {ys} rewrite map-++-distribute {A} {B} {f} {xs} {ys} = refl
@@ -573,7 +577,6 @@ Define a suitable map operator over trees:
     map-Tree : ∀ {A B C D : Set} → (A → C) → (B → D) → Tree A B → Tree C D
 
 ```
--- Your code goes here
 map-Tree : ∀ {A B C D : Set} → (A → C) → (B → D) → Tree A B → Tree C D
 map-Tree {A} {B} {C} {D} f g (leaf a) = leaf (f a)
 map-Tree {A} {B} {C} {D} f g (node l b r) = node (map-Tree f g l) (g b) (map-Tree f g r)
@@ -658,7 +661,11 @@ For example:
     product [ 1 , 2 , 3 , 4 ] ≡ 24
 
 ```
--- Your code goes here
+product : List ℕ → ℕ
+product = foldr _*_ 1
+
+_ : product [ 1 , 2 , 3 , 4 ] ≡ 24
+_ = refl
 ```
 
 #### Exercise `foldr-++` (recommended)
@@ -668,7 +675,10 @@ Show that fold and append are related as follows:
     foldr _⊗_ e (xs ++ ys) ≡ foldr _⊗_ (foldr _⊗_ e ys) xs
 
 ```
--- Your code goes here
+foldr-++ : {A : Set} (_⊗_ : A → A → A) (e : A) (xs ys : List A) →
+  foldr _⊗_ e (xs ++ ys) ≡ foldr _⊗_ (foldr _⊗_ e ys) xs
+foldr-++ _⊗_ e [] ys = refl
+foldr-++ _⊗_ e (x ∷ xs) ys rewrite foldr-++ _⊗_ e xs ys = refl
 ```
 
 #### Exercise `foldr-∷` (practice)
@@ -683,7 +693,9 @@ Show as a consequence of `foldr-++` above that
 
 
 ```
--- Your code goes here
+foldr-∷ : {A : Set} (xs : List A) → foldr _∷_ [] xs ≡ xs
+foldr-∷ [] = refl
+foldr-∷ (x ∷ xs) rewrite foldr-∷ xs = refl
 ```
 
 #### Exercise `map-is-foldr` (practice)
@@ -695,7 +707,12 @@ Show that map can be defined using fold:
 The proof requires extensionality.
 
 ```
--- Your code goes here
+map-is-foldr : {A B : Set} (f : A → B) → map f ≡ foldr (λ x → f x ∷_) []
+map-is-foldr {A} f = extensionality H
+  where
+    H : (xs : List A) → map f xs ≡ foldr (λ y → f y ∷_) [] xs
+    H [] = refl
+    H (x ∷ xs) rewrite H xs = refl
 ```
 
 #### Exercise `fold-Tree` (practice)
@@ -706,7 +723,9 @@ Define a suitable fold function for the type of trees given earlier:
 
 
 ```
--- Your code goes here
+fold-Tree : {A B C : Set} → (A → C) → (C → B → C → C) → Tree A B → C
+fold-Tree f g (leaf x) = f x
+fold-Tree f g (node l x r) = g (fold-Tree f g l) x (fold-Tree f g r)
 ```
 
 #### Exercise `map-is-fold-Tree` (practice)
@@ -714,7 +733,15 @@ Define a suitable fold function for the type of trees given earlier:
 Demonstrate an analogue of `map-is-foldr` for the type of trees.
 
 ```
--- Your code goes here
+map-is-fold-Tree : {A B C D : Set}
+  → (f : A → B)
+  → (g : C → D)
+  → map-Tree f g ≡ fold-Tree (leaf ∘ f) (λ l → node l ∘ g)
+map-is-fold-Tree {A} {B} {C} {D} f g = extensionality H
+  where
+    H : (t : Tree A C) → map-Tree f g t ≡ fold-Tree (leaf ∘ f) (λ l → node l ∘ g) t
+    H (leaf x) = refl
+    H (node l x r) rewrite H l | H r = refl
 ```
 
 #### Exercise `sum-downFrom` (stretch)
@@ -840,9 +867,11 @@ foldr-monoid _⊗_ e ⊗-monoid (x ∷ xs) y =
 
 In a previous exercise we showed the following.
 ```
+{-
 postulate
   foldr-++ : ∀ {A : Set} (_⊗_ : A → A → A) (e : A) (xs ys : List A) →
     foldr _⊗_ e (xs ++ ys) ≡ foldr _⊗_ (foldr _⊗_ e ys) xs
+-}
 ```
 
 As a consequence we can decompose fold over append in a monoid
