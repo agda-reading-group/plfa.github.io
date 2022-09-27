@@ -1138,15 +1138,19 @@ You will need to use extensionality.
 
 ```
 ¬Any≃All¬ : {A : Set} {P : A → Set} → (xs : List A) → (¬_ ∘ Any P) xs ≃ All (¬_ ∘ P) xs
-¬Any≃All¬ {A} {P} xs = record { to = to xs ; from = from xs ; from∘to = {!!} ; to∘from = {!!} }
+¬Any≃All¬ {A} {P} xs = record { to = to xs ; from = from xs ; from∘to = from∘to xs ; to∘from = to∘from xs }
   where
     to : (xs : List A) → (¬_ ∘ Any P) xs → All (¬_ ∘ P) xs
     to [] ¬Pxs = []
     to (x ∷ xs) ¬Pxxs = (λ Px → ¬Pxxs (here Px)) ∷ to xs (λ y → ¬Pxxs (there y))
     from : (xs : List A) → All (¬_ ∘ P) xs → (¬_ ∘ Any P) xs
-    from [] [] = λ{ () }
     from (x ∷ xs) (¬Px ∷ ¬Pxs) (here Px) = ¬Px Px
     from (x ∷ xs) (¬Px ∷ ¬Pxs) (there Pxs) = from xs ¬Pxs Pxs
+    from∘to : (xs : List A) → (¬Pxs : (¬_ ∘ Any P) xs) → from xs (to xs ¬Pxs) ≡ ¬Pxs
+    from∘to xs ¬Pxs = extensionality (λ Pxs → ⊥-elim (¬Pxs Pxs))
+    to∘from : (xs : List A) → (¬Pxs : All (¬_ ∘ P) xs) → to xs (from xs ¬Pxs) ≡ ¬Pxs
+    to∘from [] [] = refl
+    to∘from (x ∷ xs) (¬Px ∷ ¬Pxs) rewrite to∘from xs ¬Pxs = refl
 ```
 
 #### Exercise `All-∀` (practice)
