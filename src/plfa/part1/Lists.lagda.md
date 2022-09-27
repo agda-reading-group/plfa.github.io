@@ -1,4 +1,4 @@
----
+----
 title     : "Lists: Lists and higher-order functions"
 layout    : page
 prev      : /Decidable/
@@ -28,7 +28,7 @@ open import Relation.Nullary using (¬_; Dec; yes; no)
 open import Data.Product using (_×_; ∃; ∃-syntax) renaming (_,_ to ⟨_,_⟩)
 open import Function using (_∘_)
 open import Level using (Level)
-open import plfa.part1.Isomorphism using (_≃_; _⇔_; extensionality)
+open import plfa.part1.Isomorphism using (_≃_; _⇔_; extensionality; ∀-extensionality)
 ```
 
 
@@ -898,8 +898,6 @@ operations associate to the left rather than the right.  For example:
     foldl _⊗_ e [ x , y , z ]  =  ((e ⊗ x) ⊗ y) ⊗ z
 
 ```
---foldr : ∀ {A B : Set} → (A → B → B) → B → List A → B
-
 foldl : {A B : Set} → (_⊗_ : B → A → B) → (e : B) → (xs : List A) → B
 foldl _⊗_ e [] = e
 foldl _⊗_ e (x ∷ xs) = foldl _⊗_ (e ⊗ x) xs
@@ -912,7 +910,6 @@ Show that if `_⊗_` and `e` form a monoid, then `foldr _⊗_ e` and
 `foldl _⊗_ e` always compute the same result.
 
 ```
-
 foldl-monoid : {A : Set} (_⊗_ : A → A → A) (e : A) → IsMonoid _⊗_ e →
   (x y : A) → (xs : List A) → x ⊗ foldl _⊗_ y xs ≡ foldl _⊗_ (x ⊗ y) xs
 foldl-monoid _⊗_ e monoid-⊗ x y [] = refl
@@ -1116,9 +1113,22 @@ Do we also have the following?
 
 If so, prove; if not, explain why.
 
-
 ```
--- Your code goes here
+open import Data.Empty using (⊥; ⊥-elim)
+
+postulate DEMORGAN : {A B : Set} → ¬ (A × B) → ¬ A ⊎ ¬ B
+
+¬All⇔Any¬ : {A : Set} {P : A → Set} → (xs : List A) → (¬_ ∘ All P) xs ⇔ Any (¬_ ∘ P) xs
+¬All⇔Any¬ {A} {P} xs = record { to = to xs ; from = from xs }
+  where
+    to : (xs : List A) → (¬_ ∘ All P) xs → Any (¬_ ∘ P) xs
+    to [] ¬Pxs = ⊥-elim (¬Pxs [])
+    to (x ∷ xs) ¬Pxs with DEMORGAN (λ { ⟨ Px , Pxs ⟩ → ¬Pxs (Px ∷ Pxs) })
+    ... | inj₁ ¬Px = here ¬Px
+    ... | inj₂ ¬Pxs = there (to xs ¬Pxs)
+    from : (xs : List A) → Any (¬_ ∘ P) xs → (¬_ ∘ All P) xs
+    from (x ∷ xs) (here ¬Px) (Px ∷ Pxs) = ¬Px Px
+    from (x ∷ xs) (there ¬Pxs) (Px ∷ Pxs) = from xs ¬Pxs Pxs
 ```
 
 #### Exercise `¬Any≃All¬` (stretch)
@@ -1127,7 +1137,16 @@ Show that the equivalence `¬Any⇔All¬` can be extended to an isomorphism.
 You will need to use extensionality.
 
 ```
--- Your code goes here
+¬Any≃All¬ : {A : Set} {P : A → Set} → (xs : List A) → (¬_ ∘ Any P) xs ≃ All (¬_ ∘ P) xs
+¬Any≃All¬ {A} {P} xs = record { to = to xs ; from = from xs ; from∘to = {!!} ; to∘from = {!!} }
+  where
+    to : (xs : List A) → (¬_ ∘ Any P) xs → All (¬_ ∘ P) xs
+    to [] ¬Pxs = []
+    to (x ∷ xs) ¬Pxxs = (λ Px → ¬Pxxs (here Px)) ∷ to xs (λ y → ¬Pxxs (there y))
+    from : (xs : List A) → All (¬_ ∘ P) xs → (¬_ ∘ Any P) xs
+    from [] [] = λ{ () }
+    from (x ∷ xs) (¬Px ∷ ¬Pxs) (here Px) = ¬Px Px
+    from (x ∷ xs) (¬Px ∷ ¬Pxs) (there Pxs) = from xs ¬Pxs Pxs
 ```
 
 #### Exercise `All-∀` (practice)
@@ -1135,7 +1154,28 @@ You will need to use extensionality.
 Show that `All P xs` is isomorphic to `∀ x → x ∈ xs → P x`.
 
 ```
--- You code goes here
+All-∀ : {A : Set} {P : A → Set} → (xs : List A) → All P xs ≃ ∀ x → x ∈ xs → P x
+All-∀ {A} {P} xs = record { to = to xs ; from = from xs ; from∘to = from∘to xs ; to∘from = to∘from xs }
+  where
+    to : (xs : List A) → All P xs → (∀ x → x ∈ xs → P x)
+    to (.x ∷ xs) (Px ∷ Pxs) x (here refl) = Px
+    to (x ∷ xs) (Px ∷ Pxs) y (there y∈) = to xs Pxs y y∈
+    from : (xs : List A) → (∀ x → x ∈ xs → P x) → All P xs
+    from [] f = []
+    from (x ∷ xs) f = (f x (here refl)) ∷ from xs (λ y y∈ → f y (there y∈))
+    from∘to : (xs : List A) → (Pxs : All P xs) → from xs (to xs Pxs) ≡ Pxs
+    from∘to [] [] = refl
+    from∘to (x ∷ xs) (Px ∷ Pxs) rewrite from∘to xs Pxs = refl
+    to∘from : (xs : List A) → (f : ∀ x → x ∈ xs → P x) → to xs (from xs f) ≡ f
+    to∘from xs f = ∀-extensionality H
+      where
+        H : (x : A) → to xs (from xs f) x ≡ f x
+        H x = extensionality (F xs f)
+          where
+            F : (xs : List A) → (f : ∀ x → x ∈ xs → P x) → (x∈ : x ∈ xs) → to xs (from xs f) x x∈ ≡ f x x∈
+            F [] f ()
+            F (x ∷ xs) f (here refl) = refl
+            F (x ∷ xs) f (there x∈) rewrite F xs ((λ y y∈ → f y (there y∈))) x∈ = refl
 ```
 
 
@@ -1144,7 +1184,22 @@ Show that `All P xs` is isomorphic to `∀ x → x ∈ xs → P x`.
 Show that `Any P xs` is isomorphic to `∃[ x ] (x ∈ xs × P x)`.
 
 ```
--- You code goes here
+Any-∃ : {A : Set} {P : A → Set} → (xs : List A) → Any P xs ≃ ∃[ x ] (x ∈ xs × P x)
+Any-∃ {A} {P} xs = record { to = to xs ; from = from xs ; from∘to = from∘to xs ; to∘from = to∘from xs }
+  where
+    to : (xs : List A) → Any P xs → ∃[ x ] (x ∈ xs × P x)
+    to (x ∷ xs) (here Px) = ⟨ x , ⟨ (here refl) , Px ⟩ ⟩
+    to (x ∷ xs) (there Pxs) with to xs Pxs
+    ... | ⟨ y , ⟨ y∈ , Py ⟩ ⟩ = ⟨ y , ⟨ (there y∈) , Py ⟩ ⟩
+    from : (xs : List A) → ∃[ x ] (x ∈ xs × P x) → Any P xs
+    from (x ∷ xs) ⟨ .x , ⟨ here refl , Px ⟩ ⟩ = here Px
+    from (x ∷ xs) ⟨ y , ⟨ there y∈ , Py ⟩ ⟩ = there (from xs ⟨ y , ⟨ y∈ , Py ⟩ ⟩)
+    from∘to : (xs : List A) → (Pxs : Any P xs) → from xs (to xs Pxs) ≡ Pxs
+    from∘to (x ∷ xs) (here Px) = refl
+    from∘to (x ∷ xs) (there Pxs) rewrite from∘to xs Pxs = refl
+    to∘from : (xs : List A) → (ex : ∃[ x ] (x ∈ xs × P x)) → to xs (from xs ex) ≡ ex
+    to∘from (x ∷ xs) ⟨ .x , ⟨ here refl , Px ⟩ ⟩ = refl
+    to∘from (x ∷ xs) ⟨ y , ⟨ there y∈ , Py ⟩ ⟩ rewrite to∘from xs ⟨ y , ⟨ y∈ , Py ⟩ ⟩ = refl
 ```
 
 
@@ -1194,7 +1249,20 @@ analogues `any` and `Any?` which determine whether a predicate holds
 for some element of a list.  Give their definitions.
 
 ```
--- Your code goes here
+any : ∀ {A : Set} → (A → Bool) → List A → Bool
+any p  =  foldr _∨_ false ∘ map p
+
+open import Function using (id)
+
+_ : any id [ false , false , false ] ≡ false
+_ = refl
+
+Any? : ∀ {A : Set} {P : A → Set} → Decidable P → Decidable (Any P)
+Any? P? [] = no λ { () }
+Any? P? (x ∷ xs) with P? x   | Any? P? xs
+...                 | yes Px | _           =  yes (here Px)
+...                 | no ¬Px | yes Pxs     =  yes (there Pxs)
+...                 | no ¬Px | no ¬Pxs     =  no (λ { (here Px) → ¬Px Px ; (there Pxs) → ¬Pxs Pxs })
 ```
 
 
@@ -1240,7 +1308,14 @@ with their corresponding proofs.
       → ∃[ xs ] ∃[ ys ] ( merge xs ys zs × All P xs × All (¬_ ∘ P) ys )
 
 ```
--- Your code goes here
+split : ∀ {A : Set} {P : A → Set} (P? : Decidable P) (zs : List A)
+  → ∃[ xs ] ∃[ ys ] ( merge xs ys zs × All P xs × All (¬_ ∘ P) ys )
+split P? [] = ⟨ [] , ⟨ [] , ⟨ [] , ⟨ [] , [] ⟩ ⟩ ⟩ ⟩
+split P? (z ∷ zs) with P? z | split P? zs
+... | yes Pz | ⟨ xs , ⟨ ys , ⟨ mxsyszs , ⟨ Pxs , ¬Pys ⟩ ⟩ ⟩ ⟩
+  = ⟨ (z ∷ xs) , ⟨ ys , ⟨ left-∷ mxsyszs , ⟨ (Pz ∷ Pxs) , ¬Pys ⟩ ⟩ ⟩ ⟩
+... | no ¬Pz | ⟨ xs , ⟨ ys , ⟨ mxsyszs , ⟨ Pxs , ¬Pys ⟩ ⟩ ⟩ ⟩
+  = ⟨ xs , ⟨ (z ∷ ys) , ⟨ (right-∷ mxsyszs) , ⟨ Pxs , ¬Pz ∷ ¬Pys ⟩ ⟩ ⟩ ⟩
 ```
 
 ## Standard Library
